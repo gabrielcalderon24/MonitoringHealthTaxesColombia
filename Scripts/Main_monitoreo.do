@@ -11,13 +11,15 @@ global carpetaMadre= "C:\Users\gabri\Universidad del rosario\Control Tabaco Facu
 * A.1) Procesamiento unidades de cigarrillos consumidas en la ECV
 do "TABACO/ecv_tabaco"	
 * A.2) Procesamiento unidades de cigarrillos consumidas en la ENCSP  
-do "TABACO\encsp_tabaco.do"
+do "TABACO\encsp_tabaco"
 * A.3) Procesamiento recaudo ADRES 
-do "TABACO\ADRES_tabaco.do"		
+do "TABACO\ADRES_tabaco"		
 * A.4) Procesamiento consumo aparente (Producción + Imp - exp) 
 do "TABACO\ConsumoAparente_tabaco"
 * A.5) Procesamiento recaudo CHIP  
 
+* A.6) Procesamiento consumo aparente, IHH y prevalencia de vapeadores 
+do "TABACO\vapeadores"
 ***************************************
 * B) Códigos correspondientes a Alcohol  
 
@@ -31,7 +33,8 @@ do "ALCOHOL\recaudo_vinosLicores"
 	
 * B.4) Procesamiento consumo aparente 
 do "ALCOHOL\ConsumoAparente_alcohol"	
-
+* B.5) Procesamiento consumo aparente alcohol etílico
+do "ALCOHOL\ConsumoAparente_alcoholEtilico"	
 **************************************************
 * C) Códigos correspondientes a Bebidas azucaradas y alimentos ultraprocesados
 
@@ -40,9 +43,6 @@ do "BEBIDAS AZUCARADAS\ecv_bebidas_azucaradas"
 
 * C.2) Procesamiento prevalencia, gasto y consumo de alimentos ultraprocesados ECV 
 do "BEBIDAS AZUCARADAS\ecv_ultraprocesados"
-
-
-
 
 
 
