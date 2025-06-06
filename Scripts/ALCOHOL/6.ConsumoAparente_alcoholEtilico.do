@@ -1,11 +1,11 @@
+// Este dofile realiza la construcción del consumo aparente de alcohol etílico. Toma datos de importaciones, exportaciones y producción nacional.
 
-////////////////////////////////////////////////////////////////////////////////
+********************************************************************************
 **# Importaciones
-////////////////////////////////////////////////////////////////////////////////
+********************************************************************************
 
+import excel "$carpetaMadre\Data\importaciones_exportaciones\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Importaciones 2014-2023") cellrange(A4:AQ11900) firstrow clear
 
-
-import excel "$carpetaMadre\Data\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Importaciones 2014-2023") cellrange(A4:AQ11900) firstrow clear
 
 keep if inlist(SubpartidaArancelaria, ///  
     2207200000, /// Alcohol etílico y aguardiente desnaturalizados, de cualquier graduación.
@@ -23,12 +23,12 @@ tempfile importaciones
 save `importaciones'
 
 
-////////////////////////////////////////////////////////////////////////////////
+********************************************************************************
 **# Exportaciones
-////////////////////////////////////////////////////////////////////////////////
+********************************************************************************
 
 clear
-import excel "$carpetaMadre\Data\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Exportaciones 2014-2023") cellrange(A4:M3629) firstrow clear
+import excel "$carpetaMadre\Data\importaciones_exportaciones\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Exportaciones 2014-2023") cellrange(A4:M3629) firstrow clear
 
  keep if inlist(SubpartidaArancelaria, ///  
     2207200000, /// Alcohol etílico y aguardiente desnaturalizados, de cualquier graduación.
@@ -40,16 +40,12 @@ import excel "$carpetaMadre\Data\1_Importaciones y exportaciones 2014 a 2023 - 2
 collapse (sum) Q_exp=CantidadUnidadesComerciales, by(FechaAño)
 destring FechaAño, replace
 
-
-
 tempfile exportaciones
 save `exportaciones'
 		
-////////////////////////////////////////////////////////////////////////////////
+********************************************************************************
 **# Producción Nacional
-////////////////////////////////////////////////////////////////////////////////
-
-
+********************************************************************************
 
 clear
 set obs 1
@@ -121,14 +117,12 @@ gen year=2022
 append using `produccion'
 save `produccion', replace
 
-
 drop if uno==1
 drop uno
 
-
 destring PRODUCCIÓN VENTAS VALORDEVENTAS, replace
-replace PRODUCCIÓN= PRODUCCIÓN * 3.785 if CÓDIGOCPC== "3413103" | CÓDIGOCPC== "03413103" 
-replace VENTAS= VENTAS * 3.785 if year != 2016 & (CÓDIGOCPC== "3413103"  | CÓDIGOCPC== "03413103") 
+replace PRODUCCIÓN = PRODUCCIÓN * 3.785 if CÓDIGOCPC== "3413103" | CÓDIGOCPC== "03413103" 
+replace VENTAS = VENTAS * 3.785 if year != 2016 & (CÓDIGOCPC== "3413103"  | CÓDIGOCPC== "03413103") 
 replace VALORDEVENTAS= VALORDEVENTAS*1000  
 collapse (sum) Q_prod= PRODUCCIÓN Q_vent=VENTAS v_ventas_EAM = VALORDEVENTAS , by(year)
 rename year FechaAño
@@ -138,24 +132,20 @@ gen precio_EAM_L= v_ventas_EAM/Q_vent
 save "$carpetaMadre\Data\Created data\produccion_etilico_EAM.dta", replace
 		
 		
-
-////////////////////////////////////////////////////////////////////////////////
+********************************************************************************
 **# Construccion Consumpo aparente y consolidación
-////////////////////////////////////////////////////////////////////////////////
+********************************************************************************
 
-
-	
 use "$carpetaMadre\Data\Created data\produccion_etilico_EAM.dta", clear
 merge 1:1 FechaAño using `exportaciones', nogen
 merge 1:1 FechaAño using `importaciones', nogen
 	
-	
 gen consumoAparente = Q_imp + Q_vent - Q_exp 
+
 * En millones de litros 
 replace consumoAparente=consumoAparente/1000000 
 
 format consumoAparente %20.2f
 drop v_ventas_EAM v_ventas_I		
 tw (connected consumoAparente FechaAño) 
-
-save "$carpetaMadre\Data\Created data\ConsumoAparente_alcoholEtilico.dta", replace
+save "$carpetaMadre\Data\Created data\ConsumoAparente_alcoholEtilico.dta", replace 

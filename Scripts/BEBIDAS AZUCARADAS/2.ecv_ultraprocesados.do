@@ -218,6 +218,43 @@ gen year=2023
 tempfile int2023  
 save `int2023'  
 
+
+////////////
+/// 2024 ///
+////////////
+
+// Para 2023 no podemos calcular el gasto, no hay sección de gastos de los hogares
+
+// Prevalencia de consumo de alimentos ultraprocesados //
+use "$carpetaMadre\Data\ECV\ENCV2024\original\Salud.DTA", clear
+keep P3003 P3003S1 FEX_C
+rename P3003S1 frecuencia  
+rename P3003 prevalencia 
+
+gen prev=. 
+replace prev=1 if prevalencia==1 
+replace prev=0 if prevalencia==2 
+gen year=2024 
+tempfile prev2024 
+save `prev2024' 
+
+// Intensidad de consumo // 
+use "$carpetaMadre\Data\ECV\ENCV2024\original\Salud.dta", clear 
+keep P3003 P3003S1 FEX_C
+rename P3003S1 frecuencia  
+rename P3003 prevalencia 
+gen intensidad=. 
+replace intensidad=7 if frecuencia==1 | frecuencia==2 
+replace intensidad= runiformint(4,6) if frecuencia==3 // Asignamos un valor dentro de una distribución uniforme en el intervalo de días
+replace intensidad= runiformint(2,3) if frecuencia==4 
+replace intensidad= 1 if frecuencia==5 | frecuencia==6 
+
+collapse (mean) intensidad [pw=FEX_C] if prevalencia==1  
+gen year=2024
+tempfile int2024
+save `int2024'  
+
+
 ////////////////////////////////
 /// Juntar archivos de gasto ///
 //////////////////////////////// 
@@ -236,6 +273,7 @@ use `int2020'
 append using `int2021' 
 append using `int2022'
 append using `int2023'
+append using `int2024'
 tempfile int_ecv 
 save `int_ecv'
 
@@ -248,6 +286,7 @@ use `prev2020'
 append using `prev2021' 
 append using `prev2022'
 append using `prev2023'
+append using `prev2024'
 tempfile prev_ecv
 save `prev_ecv' 
 
@@ -264,7 +303,8 @@ rename annio year
 rename b prev
 /// Juntar con el archivo de intensidad de consumo y guardar finalmente en la misma base //
 merge m:1 year using `int_ecv' 
-drop _merge
+keep if _merge == 3
+drop _merge 
 save "$carpetaMadre\Data\Created data\ecv_prevalencia_intensidad_ultraprocesados.dta", replace
 
 

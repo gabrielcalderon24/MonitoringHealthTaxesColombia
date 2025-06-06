@@ -1,5 +1,5 @@
 // Definir nuevamente la carpeta para leer archivos de cada departamento //
-local dptos "$carpetaMadre/Data/dptos_alcohol"
+local dptos "$carpetaMadre/Data/datos_CHIP"
 clear all
 set obs 1
 gen uno=1
@@ -22,7 +22,6 @@ drop uno
 gen year_str=substr(nome,-6,2)
 gen year = real("20" + year_str)
 destring year, replace
-
 
 
 // Para 2014, 2015 y 2016 no hay recaudo en pesos, solo en miles, cambiamos las comas por puntos y volvemos ambas variables númericas. Para 2022 son muy diferentes los rubros  
@@ -49,24 +48,33 @@ keep if inlist(CODIGO, ///
     "TI.A.1.15.3 " ///
 )
 
-// No se incluye cerveza en esta estimación, las dinámicas impositivas son un poco distintas //
+// No se incluye cerveza en esta estimación, los impuestos en estos productos funcionan distinto, vale la pena separarlos 
 
-collapse (sum) recaudoefectivopesos recaudoefectivomiles , by(year CODIGO NOMBRE) 
-// Excel para tener la contabilidad de acuerdo a cada recaudo específico por año ///  
-export excel using "$carpetaMadre/Data/Created data/recuados_vinoLicores.xlsx", firstrow(variables) replace
+// Arreglamos las magnitudes, dejamos el recaudo en pesos 
 
-/// Suma total por año ///
-collapse (sum) recaudoefectivomiles recaudoefectivopesos, by(year)
+replace recaudoefectivomiles = recaudoefectivomiles * 1000
+replace recaudoefectivopesos = recaudoefectivomiles if missing(recaudoefectivopesos)
 
-// En billones //
-replace recaudoefectivomiles=recaudoefectivomiles/1000000000 
-replace recaudoefectivopesos=recaudoefectivopesos/1000000000000 
+// Guardamos un Excel para tener la contabilidad de acuerdo a cada rubro específico 
 
-gen recaudobillones=. 
-replace recaudobillones= recaudoefectivomiles if year<2017 
-replace recaudobillones= recaudoefectivopesos if year>=2017 
+preserve 
+ 
+collapse (sum) recaudoefectivopesos, by(year CODIGO NOMBRE) 
+
 drop if year==2009 | year==2008
-drop recaudoefectivomiles 
-drop recaudoefectivopesos
 
-save "$carpetaMadre/Data/Created data/recaudo_vinosLicores", replace 
+export excel using "$carpetaMadre/Data/Created data/recaudos_especificos_vinoLicores.xlsx", firstrow(variables) replace
+
+restore
+ 
+// Colapsamos el recaudo total por año 
+
+collapse (sum) recaudoefectivopesos, by(year)
+
+// Dejamos en billones
+gen recaudobillones = recaudoefectivopesos/1000000000000 
+ 
+drop if year==2009 | year==2008
+drop recaudoefectivopesos 
+
+save "$carpetaMadre/Data/Created data/recaudo_total_vinosLicores", replace 

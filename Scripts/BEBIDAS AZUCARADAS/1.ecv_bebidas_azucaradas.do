@@ -1,15 +1,13 @@
 
-////////////////////////////
-///// Prevalencias /////////
-////////////////////////////
+**# Prevalencias e intensidad de consumo de bebidas azucaradas según la ECV 
 
 // Las prevalencias sí pueden calcularse desde el año 2016, también se obtiene una intensidad de consumo, entendido como el número promedio de días que consumen bebidas azucaradas. Para alimentos ultraprocesados es posible construir este dato a partir de 2020.
 
-********************************** 
-* Prevalencia e intensidad de consumo: bebidas azucaradas según la ECV
+*************************************************************************** 
+**# Prevalencia e intensidad de consumo: bebidas azucaradas según la ECV **
+***************************************************************************
 
-
-/////// 2016 ////// 
+**# ECV 2016 
 
 // Prevalencia //
 use "$carpetaMadre\Data\ECV\ENCV2016\original\Salud.dta", clear   
@@ -42,7 +40,7 @@ tempfile int2016
 save `int2016'  
 
 
-/////// 2017 ////// 
+**# ECV 2017
 
 // Prevalencia //
 use "$carpetaMadre\Data\ECV\ENCV2017\original\Salud.dta", clear 
@@ -76,7 +74,8 @@ save `int2017'
 
 
 
-/////// 2018 ////////
+**# ECV 2018 
+
 use "$carpetaMadre\Data\ECV\ENCV2018\original\Salud.dta", clear 
 keep P1707 P1707S1 FEX_C 
 rename P1707 prevalencia 
@@ -107,7 +106,7 @@ tempfile int2018
 save `int2018'  
 
 
-/////// 2019 ////////
+**# ECV 2019 
 use "$carpetaMadre\Data\ECV\ENCV2019\original\Salud.dta", clear 
 keep P1707 P1707S1 FEX_C 
 rename P1707 prevalencia 
@@ -138,7 +137,8 @@ tempfile int2019
 save `int2019'  
 
 
-/// 2020 ///
+**# ECV 2020
+
 use "$carpetaMadre\Data\ECV\ENCV2020\original\Salud.dta", clear 
 keep P1707 P1707S1 FEX_C 
 rename P1707 prevalencia 
@@ -169,7 +169,7 @@ tempfile int2020
 save `int2020'  
 
 
-//////// 2021 ///////
+**# ECV 2021
 use "$carpetaMadre\Data\ECV\ENCV2021\original\Salud.dta", clear 
 keep p1707 p1707s1 fex_c 
 rename p1707 prevalencia 
@@ -202,7 +202,7 @@ save `int2021'
 
 
 
-/////// 2022 ///////
+**# ECV 2022
 use "$carpetaMadre\Data\ECV\ENCV2022\original\Salud.dta", clear 
 keep P1707 P1707S1 FEX_C 
 rename P1707 prevalencia 
@@ -233,7 +233,7 @@ tempfile int2022
 save `int2022'  
 
 
-///// 2023 ////////
+**# ECV 2023
 use "$carpetaMadre\Data\ECV\ENCV2023\original\Salud.dta", clear 
 keep P1707 P1707S1 FEX_C 
 rename P1707 prevalencia 
@@ -264,11 +264,42 @@ gen year=2023
 tempfile int2023  
 save `int2023'  
 
-////////////////////////////////////////////////
-///////// Intensidad de consumo ////////////////
-////////////////////////////////////////////////
 
-// Juntar archivos temporales para intensidad de consumo // 
+**# ECV 2024
+
+use "$carpetaMadre\Data\ECV\ENCV2024\original\Salud.dta", clear 
+keep P1707 P1707S1 FEX_C 
+rename P1707 prevalencia 
+rename P1707S1 frecuencia 
+
+gen prev=. 
+replace prev= 1 if prevalencia==1 
+replace prev=0 if prevalencia==2 
+
+gen year=2024
+tempfile prev2024
+save `prev2024'
+
+
+// Intensidad de consumo // 
+use "$carpetaMadre\Data\ECV\ENCV2024\original\Salud.DTA", clear 
+keep P1707 P1707S1 FEX_C 
+rename P1707S1 frecuencia  
+rename P1707 prevalencia 
+gen intensidad=. 
+replace intensidad=7 if frecuencia==1 | frecuencia==2 
+replace intensidad= runiformint(4,6) if frecuencia==3 // Asignamos un valor dentro de una distribución uniforme en el intervalo de días
+replace intensidad= runiformint(2,3) if frecuencia==4 
+replace intensidad= 1 if frecuencia==5 | frecuencia==6 
+
+collapse (mean) intensidad [pw=FEX_C] if prevalencia==1  
+gen year=2024
+tempfile int2024
+save `int2024'
+  
+
+
+**# Juntar archivos temporales para intensidad de consumo  
 use `int2016' , clear
 append using `int2017' 
 append using `int2018'
@@ -277,16 +308,12 @@ append using `int2020'
 append using `int2021'
 append using `int2022'
 append using `int2023' 
+append using `int2024' 
 tempfile ecv_int
 save `ecv_int', replace
 
-///////////////////////////////////// 
-///// Prevalencias //////////////////
-/////////////////////////////////////
 
-tempfile prev_azucaradas
-
-// Juntar archivos de prevalencia /// 
+**# Juntar archivos temporales de prevalencia 
 use `prev2016' , clear
 append using `prev2017' 
 append using `prev2018'
@@ -295,9 +322,11 @@ append using `prev2020'
 append using `prev2021'
 append using `prev2022'
 append using `prev2023' 
+append using `prev2024' 
+tempfile prev_azucaradas
 save `prev_azucaradas', replace
 
-// Obtener intervalos de confianza //
+// Obtener intervalos de confianza 
 use `prev_azucaradas', clear 
 replace prev=prev*100
 mean prev [aw=FEX_C], over(year)
@@ -310,10 +339,11 @@ rename b prevalencia
 rename t tvalue 
 rename annio year 
 
-// Combinar archivos de prevalencia e intensidad de consumo //
+// Combinar archivos de prevalencia e intensidad de consumo 
 merge m:1 year using `ecv_int' 
+keep if _merge == 3
 drop _merge
-save "$carpetaMadre\Data\Created data\ecv_azucaradas.dta", replace
+save "$carpetaMadre\Data\Created data\ecv_prevalencia_intensidad_azucaradas.dta", replace
 
 
 

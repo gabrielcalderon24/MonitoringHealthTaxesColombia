@@ -1,15 +1,13 @@
-clear all
-
 //////////////////////////////////////////////////////////////////////////
 // Indicadores de consumo aparente, IHH y prevalencia para Vapeadores ////
 //////////////////////////////////////////////////////////////////////////
 
 
-////////////////////////////////////////////////////////////////////////////////
-**# Consolidación consumo aparente e IHH- Productos llegan por importación /////
-////////////////////////////////////////////////////////////////////////////////
+*********************************************************************************
+**# Consolidación consumo aparente e IHH - Productos llegan por importación *****
+*********************************************************************************
 
-import excel "$carpetaMadre\Data\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Importaciones 2014-2023") cellrange(A4:AQ11979) firstrow clear
+import excel "$carpetaMadre\Data\importaciones_exportaciones\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Importaciones 2014-2023") cellrange(A4:AQ11979) firstrow clear
 
  keep if inlist(SubpartidaArancelaria, ///  
     2404110000, /// Productos destinados para la inhalación sin combustión: Que contengan tabaco o tabaco reconstituido
@@ -25,20 +23,20 @@ collapse (sum) Q_imp=CantidadUnidadesComerciales valor=ValorCIFPesos, by(FechaA�
 
 destring FechaAño, replace 
 
-* Poner en millones de pesos
+* Poner en millones de pesos. Esta cantidad corresponde directamente al consumo aparente ya que estos productos solo llegan por importaciones 
 replace valor= valor/1000000
 
 * Exportar en Excel para base de indicadores 
-export excel "$carpetaMadre\Data\Created data\vapeadores.xlsx", firstrow(variables) replace
+export excel "$carpetaMadre\Data\Created data\vapeadores_importaciones.xlsx", firstrow(variables) replace
 
 * Exportar en archivo .dta
-save "$carpetaMadre\Data\Created data\vapeadores.data", replace 
+save "$carpetaMadre\Data\Created data\vapeadores_importaciones.dta", replace 
 
-////////////////////////////////
-**# IHH POR PRODUCTO ///////////
-//////////////////////////////// 
+********************************
+**# IHH POR PRODUCTO ***********
+********************************
 
-import excel "$carpetaMadre\Data\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Importaciones 2014-2023") cellrange(A4:AQ11979) firstrow clear
+import excel "$carpetaMadre\Data\importaciones_exportaciones\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Importaciones 2014-2023") cellrange(A4:AQ11979) firstrow clear
 
 // Construir el IHH de acuerdo a cada subpartida arancelaria 
 
@@ -71,18 +69,15 @@ replace share= share^2
 collapse (sum) share, by(SubpartidaArancelaria FechaAño)
 rename share IHH 
  
-save "$carpetaMadre\Data\Created data\IHH_VAP.data", replace  
+save "$carpetaMadre\Data\Created data\IHH_VAPEADORES.dta", replace  
 
 
-////////////////////////////
-**# Prevalencias ///////////
-////////////////////////////
+***************************
+**# Prevalencias **********
+***************************
 
-*************************************************************************************
-** Las prevalencias para cigarrillos electrónicos se pueden calcular a partir de 2019
-************************************************************************************* 
-
-
+// Las prevalencias para cigarrillos electrónicos se pueden calcular a partir de 2019, a partir de este año se empieza a preguntar en la ECV por este consumo
+ 
 /////// 2019 //////// 
 use "$carpetaMadre\Data\ECV\ENCV2019\original\Salud.dta", clear 
 keep P3008S2 FEX_C 
@@ -157,13 +152,26 @@ tempfile prev2023
 save `prev2023'
 
 
+/////// 2024 ///////
+use "$carpetaMadre\Data\ECV\ENCV2024\original\Salud.dta", clear 
+keep P3008S2 FEX_C 
+rename P3008S2 prevalencia  
 
-// Juntar archivos de prevalencia ///
+gen prev=. 
+replace prev= 1 if prevalencia==1 
+replace prev=0 if prevalencia==2 
+ 
+gen year=2024
+tempfile prev2024
+save `prev2024'
+
+// Juntar archivos de prevalencia 
 use `prev2019' , clear
 append using `prev2020'
 append using `prev2021'
 append using `prev2022'
 append using `prev2023' 
+append using `prev2024' 
 
 **********************************
 **** Prevalencias por año ********
@@ -175,9 +183,5 @@ svmat2 A , names(col) rnames(stat)
 gen annio = regexs(2) if regexm(stat, "^([^0-9]*)([0-9]+)([^0-9]*)$")
 destring annio, replace 
 keep b se t annio
+drop if se ==.
 save "$carpetaMadre\Data\Created data\prev_vapeadores.dta", replace
-
-
-
-
-

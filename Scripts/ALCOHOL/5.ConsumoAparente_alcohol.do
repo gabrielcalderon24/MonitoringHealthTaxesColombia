@@ -1,19 +1,10 @@
-clear all
-// Construcción consumo aparente de alcohol
+// Este dofile realiza la construcción del consumo aparente de alcohol. Toma datos de importaciones, exportaciones y producción nacional, se mide en gasto.
 
-///////////////////////////
-**# Importaciones /////////
-///////////////////////////
+***************************
+**# Importaciones *********
+***************************
 
-
-/////// Voy a quitar los que tienen alcohol etílico en importaciones/exportaciones ////////////////// 
- 
- //2207100000, /// // Alcohol etílico sin desnaturalizar con grado alcohólico volumétrico superior o igual al 80% vol.
- //2207200000, /// // Alcohol etílico y aguardiente desnaturalizados, de cualquier graduación.
- //2207200010, /// // Alcohol etílico o etanol, de contenido alcohólico volumétrico superior o igual al 96,3 % vol, desnaturalizado con gasolina 
- //2207200090, /// // Los demás Alcohol etílico y aguardiente desnaturalizados, de cualquier graduación
-
-import excel "$carpetaMadre\Data\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Importaciones 2014-2023") cellrange(A4:AQ11900) firstrow clear
+import excel "$carpetaMadre\Data\importaciones_exportaciones\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Importaciones 2014-2023") cellrange(A4:AQ11900) firstrow clear
 
 keep if inlist(SubpartidaArancelaria, ///
     2207100000, /// Alcohol etílico sin desnaturalizar, mayor a 80%
@@ -50,20 +41,19 @@ tab FechaAño PorcentajeArancel
 tab FechaAño PorcentajeIVA
 
 
-
 * Tomamos unidades comerciales en este caso como litros 
-
 collapse (sum) TotalArancel TotalIVA Q_imp=CantidadUnidadesComerciales, by(FechaAño)
 destring FechaAño, replace
+
 tempfile importaciones
 save `importaciones'
 
-
-////////////////////////////////////////////////////////////////////////////////
+********************************************************************************
 **# Exportaciones
-////////////////////////////////////////////////////////////////////////////////
+********************************************************************************
 
-import excel "$carpetaMadre\Data\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Exportaciones 2014-2023") cellrange(A4:M3629) firstrow clear
+import excel "$carpetaMadre\Data\importaciones_exportaciones\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Exportaciones 2014-2023") cellrange(A4:M3629) firstrow clear
+
 keep if inlist(SubpartidaArancelaria, ///
     2207100000, /// Alcohol etílico sin desnaturalizar, mayor a 80%
     2203000000, /// Cerveza de malta
@@ -93,20 +83,17 @@ keep if inlist(SubpartidaArancelaria, ///
     2208909000  /// Los demás licores.
 )
 
-
-
-	
 collapse (sum) Q_exp=CantidadUnidadesComerciales, by(FechaAño)
 destring FechaAño, replace
 
 tempfile exportaciones
 save `exportaciones'
 		
-////////////////////////////////////////////////////////////////////////////////
+********************************************************************************
 **# Producción Nacional
-////////////////////////////////////////////////////////////////////////////////
+********************************************************************************
 
-/// En producción no hay alcohol etílico, no parece haber la necesidad de corregir ////////////////
+* En producción no hay alcohol etílico, no parece haber la necesidad de corregir 
 
 clear
 set obs 1
@@ -136,7 +123,8 @@ rename ARTÍCULOSCONPRODUCCIÓN ARTÍCULOS
 append using `produccion'
 save `produccion', replace
 
-// EN 2017 todos los códigos tienen un 0 al principio//
+// EN 2017 todos los códigos tienen un 0 al principio, acá se corrige 
+
 import excel "$carpetaMadre\Data\EAM\Anexos_EAM_desagregacion_variables_2017.xls", sheet("6.2") cellrange(A13:I3228) firstrow clear
 keep if CÓDIGOCPC == "02411001" | CÓDIGOCPC == "02413101" | CÓDIGOCPC == "02413104" | CÓDIGOCPC == "02413199" | CÓDIGOCPC == "02413105" | CÓDIGOCPC == "02413102" | CÓDIGOCPC == "02413109" | CÓDIGOCPC == "02413103" | CÓDIGOCPC == "02413106" | CÓDIGOCPC == "02413110" |CÓDIGOCPC == "02413111" | CÓDIGOCPC == "02413901" | CÓDIGOCPC == "02421101" | CÓDIGOCPC == "02421202" | CÓDIGOCPC == "02423002" | CÓDIGOCPC == "02423003" | CÓDIGOCPC == "02431001" | CÓDIGOCPC == "02431002" | CÓDIGOCPC == "02431004" 
 
@@ -180,7 +168,6 @@ save `produccion', replace
 drop if uno==1
 drop uno
 
-
 destring PRODUCCIÓN VENTAS, replace
 collapse (sum) Q_prod= PRODUCCIÓN Q_vent=VENTAS , by(year)
 rename year FechaAño
@@ -188,9 +175,10 @@ rename year FechaAño
 tempfile produccion
 save `produccion'		
 		
-////////////////////////////////////////////////////////////////////////////////
+********************************************************************************
 **# Construccion Consumpo aparente y consolidación
-////////////////////////////////////////////////////////////////////////////////	
+********************************************************************************	
+
 use `importaciones', clear
 merge 1:1 FechaAño using `exportaciones', nogen
 merge 1:1 FechaAño using `produccion', nogen

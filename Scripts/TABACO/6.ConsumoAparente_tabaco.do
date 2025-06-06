@@ -1,9 +1,13 @@
-clear all
 ////////////////////////////////////////////////////////////////////////////////
 **# Importaciones
 ////////////////////////////////////////////////////////////////////////////////
 
-import excel "$carpetaMadre\Data\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Importaciones 2014-2023") cellrange(A4:AQ11979) firstrow clear
+// Definimos una global para los datos de exportaciones e importaciones 
+global data_exp_imp = "$carpetaMadre\Data\importaciones_exportaciones"
+
+// Este dofile estima el consumo aparente de cigarrillos mediante cálculos de las exportaciones, importaciones y producción nacional. 
+
+import excel "$data_exp_imp\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Importaciones 2014-2023") cellrange(A4:AQ11979) firstrow clear
 keep if ///
 inlist(SubpartidaArancelaria, ///
 					/// // 2401101000, /// // Tabaco negro sin desvenar o desnervar, en rama o sin elaborar
@@ -12,9 +16,9 @@ inlist(SubpartidaArancelaria, ///
 					/// // 2401202000, /// // Tabaco rubio total o parcialmente desvenado o desnervado
 					/// // 2401300000, /// // Desperdicios de tabaco
 					/// // 2402100000, /// // Cigarros (puros) (incluso despuntados) y cigarritos (puritos) que contengan tabaco
-					2402201000, /// // Cigarrillos de tabaco negro <<<<<<<<
-					2402202000, /// // Cigarrillos de tabaco rubio <<<<<<<<
-					2402900000 /// // Los demás cigarrillos de tabaco o de  sucedáneos del tabaco
+					       2402201000, /// // Cigarrillos de tabaco negro 
+					       2402202000, /// // Cigarrillos de tabaco rubio 
+					       2402900000 /// // Los demás cigarrillos de tabaco o de sucedáneos del tabaco
 					/// // 2403110000, /// // Tabaco para pipa de agua mencionado en la Nota 1 de Subpartida
 					/// // 2403190000, /// // Los demás tabacos para fumar, incluso con sucedáneos de tabaco en cualquier proporción
 					/// // 2403910000, /// // Tabaco "homogeneizado" o "reconstituido"
@@ -51,15 +55,12 @@ destring FechaAño, replace
 
 tempfile importaciones
 save `importaciones'
-
-save "$carpetaMadre\Data\Created data\importacionesDIAN.dta", replace
-
-
+ 
 ////////////////////////////////////////////////////////////////////////////////
 **# Exportaciones
 ////////////////////////////////////////////////////////////////////////////////
 
-import excel "$carpetaMadre\Data\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Exportaciones 2014-2023") cellrange(A4:M3626) firstrow clear
+import excel "$data_exp_imp\1_Importaciones y exportaciones 2014 a 2023 - 2024DP000063623 PQSR.xlsx", sheet("Exportaciones 2014-2023") cellrange(A4:M3626) firstrow clear
 keep if ///
 inlist(SubpartidaArancelaria, ///
 					/// // 2401101000, /// // Tabaco negro sin desvenar o desnervar, en rama o sin elaborar
@@ -68,9 +69,9 @@ inlist(SubpartidaArancelaria, ///
 					/// // 2401202000, /// // Tabaco rubio total o parcialmente desvenado o desnervado
 					/// // 2401300000, /// // Desperdicios de tabaco
 					/// // 2402100000, /// // Cigarros (puros) (incluso despuntados) y cigarritos (puritos) que contengan tabaco
-					2402201000, /// // Cigarrillos de tabaco negro <<<<<<<<
-					2402202000, /// // Cigarrillos de tabaco rubio <<<<<<<<
-					2402900000 /// // Los demás cigarrillos de tabaco o de  sucedáneos del tabaco
+					       2402201000, /// // Cigarrillos de tabaco negro 
+					       2402202000, /// // Cigarrillos de tabaco rubio 
+					       2402900000 /// // Los demás cigarrillos de tabaco o de  sucedáneos del tabaco
 					/// // 2403110000, /// // Tabaco para pipa de agua mencionado en la Nota 1 de Subpartida
 					/// // 2403190000, /// // Los demás tabacos para fumar, incluso con sucedáneos de tabaco en cualquier proporción
 					/// // 2403910000, /// // Tabaco "homogeneizado" o "reconstituido"
@@ -169,8 +170,8 @@ save `produccion'
 **# Recaudo
 ////////////////////////////////////////////////////////////////////////////////
 
-* El archivo de "recaudoADRES" se debe crear previamente con el archido "ADRES_tabaco"
-use "$carpetaMadre\Data\Created data\recaudoADRES.dta", clear
+* El archivo de "recaudoADRES" se debe crear previamente con el archivo "ADRES_tabaco"
+use "$carpetaMadre\Data\Created data\recaudoADRES_consolidado.dta", clear
 
 collapse (sum) juegosyazar - totales , by(year)
 
@@ -189,8 +190,6 @@ save `impoConsumo'
 **# Construccion Consumpo aparente y consolidación
 ////////////////////////////////////////////////////////////////////////////////
 
-
-	
 use `importaciones', clear
 merge 1:1 FechaAño using `exportaciones', nogen
 merge 1:1 FechaAño using `produccion', nogen
@@ -199,19 +198,14 @@ merge 1:1 FechaAño using `impoConsumo', nogen
 replace Q_vent = 21 if FechaAño==2022 | FechaAño==2023 // Supuesto porque los datos aún no están
 
 gen consumoAparente = Q_imp     + Q_vent - Q_exp
-gen consumoAparente2= Q_impPeso + Q_vent - Q_expPeso
+gen consumoAparente2= Q_impPeso + Q_vent - Q_expPeso // Aproximación 
 		
 tw (connected consumoAparente FechaAño) (connected consumoAparente2 FechaAño) ///
 	, legend(order( 1 "Con unidades reportadas" 2 "Con unidades imputadas"  ) pos(6)) ///
 	ytitle(Millones de cigarrillos) scheme(plotplainblind)
 
-save "$carpetaMadre\Data\Created data\monitoreo_tabaco.dta", replace
-
-
-use "$carpetaMadre\Data\Created data\monitoreo_tabaco.dta", clear
-
 tw (connected Q_imp FechaAño) (connected Q_impPeso FechaAño) (connected Q_exp FechaAño) (connected Q_expPeso FechaAño) (connected Q_vent FechaAño) ///
 	, legend(order( 1 "Impor - rep" 2 "Impor - imp" 3 "Exp - rep" 4 "Exp - imp" 5 "Nacional"  ) pos(6) cols(3)) ///
 	ytitle(Millones de cigarrillos) scheme(plotplainblind)
 		
-		
+save "$carpetaMadre\Data\Created data\consumoAparente_tabaco.dta", replace		
